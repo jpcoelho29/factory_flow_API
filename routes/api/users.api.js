@@ -2,24 +2,21 @@ const express = require('express');
 const { check, validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
 const dbCon = require('../../config/db');
-
 const router = express.Router();
-
-//Middleware
-
-// Define main table name for this endpoint
-
-const tbl = 'tbl_users';
+const user = require('../../models/user.model');
 
 // @route   GET api/users
 // @desc    Get all users
 // @access  Private
 
-router.get('/', (req, res) => {
-  dbCon.query(`SELECT * FROM ${tbl}`, (err, rows) => {
-    if (err) return res.status(500).send('Server Error');
-    res.json(rows);
-  });
+router.get('/', async (req, res) => {
+  try {
+    let result = await user.getAll();
+    res.json(result);
+  } catch (e) {
+    console.log(e);
+    res.sendStatus(500);
+  }
 });
 
 // @route   GET api/users/:id
