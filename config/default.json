@@ -1,0 +1,9 @@
+{
+  "db": {
+    "connectionLimit": 10,
+    "host": "localhost",
+    "user": "root",
+    "password": "",
+    "database": "factory_flow_db"
+  }
+}
