@@ -13,7 +13,7 @@ const tbl = 'tbl_users';
 
 // @route   GET api/users
 // @desc    Get all users
-// @access  Public
+// @access  Private
 
 router.get('/', (req, res) => {
   dbCon.query(`SELECT * FROM ${tbl}`, (err, rows) => {
