@@ -23,17 +23,17 @@ router.get('/', async (req, res) => {
 // @desc    Get user by id
 // @access  Private
 
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   const id = req.params.id;
-  dbCon.query(
-    `SELECT id, username, email, phone, status FROM ${tbl} WHERE id=? LIMIT 1`,
-    [id],
-    (err, rows) => {
-      if (err) return res.status(500).send('Server Error');
-      if (rows.length) return res.json(rows);
-      res.status(400).json({ error: 'Could not get user.' });
-    }
-  );
+  try {
+    let result = await user.getOne(id);
+    if (!result.length)
+      return res.status(400).json({ erro: 'User not found.' });
+    res.json(result[0]);
+  } catch (e) {
+    console.log(e);
+    res.sendStatus(500);
+  }
 });
 
 // @route   POST api/users
