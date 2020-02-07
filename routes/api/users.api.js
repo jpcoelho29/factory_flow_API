@@ -12,6 +12,9 @@ const user = require('../../models/user.model');
 router.get('/', async (req, res) => {
   try {
     let result = await user.getAll();
+    if (!result.length) {
+      return res.status(400).json({ error: 'Users not found.' });
+    }
     res.json(result);
   } catch (e) {
     console.log(e);
@@ -26,9 +29,10 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   const id = req.params.id;
   try {
-    let result = await user.getOne(id);
-    if (!result.length)
-      return res.status(400).json({ erro: 'User not found.' });
+    let result = await user.getOne(id, ['id']);
+    if (!result.length) {
+      return res.status(400).json({ error: 'User not found.' });
+    }
     res.json(result[0]);
   } catch (e) {
     console.log(e);
@@ -52,42 +56,42 @@ router.post(
     ).isLength({ min: 6 }),
     check('email').normalizeEmail()
   ],
-  (req, res) => {
+  async (req, res) => {
     const errors = validationResult(req);
 
     if (!errors.isEmpty()) {
-      return res.status(400).send({ errors: errors.array() });
+      return res.status(400).json({ errors: errors.array() });
     }
 
-    // Check if user exists
-    const { username, email } = req.body;
-    var { password } = req.body;
+    // Check if user already exists
+    const { username, email, password, phone } = req.body;
 
-    dbCon.query(
-      `SELECT username FROM ${tbl} WHERE username = ?`,
-      [username],
-      async (err, rows) => {
-        if (err) {
-          return res.status(500).send('Server Error');
-        }
-        if (rows.length > 0) {
-          return res.status(400).send({ errors: 'Invalid Username' });
-        }
-
+    try {
+      let result = await user.getOne(username, 'username');
+      if (result.length)
+        return res.status(400).json({ error: 'Invalid username' });
+      try {
         // Encrypt Password
         const salt = await bcrypt.genSalt(10);
-        password = await bcrypt.hash(password, salt);
-        data = { username, password, email };
+        hashed_password = await bcrypt.hash(password, salt);
 
-        // Insert User into Database
-        dbCon.query(`INSERT INTO ${tbl} SET ?`, [data], (err, rows) => {
-          if (err) {
-            return res.status(500).send('Server Error');
-          }
-          res.json({ id: rows.insertId, username });
-        });
+        //Insert into database
+
+        newUser = { username, password: hashed_password, email, phone };
+
+        let result = await user.create(newUser);
+
+        if (result) return res.json({ result, username, email, phone });
+
+        return res.status(400).json({ error: 'Could not create new user' });
+      } catch (e) {
+        console.log(e);
+        return res.sendStatus(500);
       }
-    );
+    } catch (e) {
+      console.log(e);
+      return res.sendStatus(500);
+    }
   }
 );
 
@@ -95,13 +99,46 @@ router.post(
 // @desc    Delete user by id
 // @access  Private
 
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   const id = req.params.id;
-  dbCon.query(`DELETE FROM ${tbl} WHERE id=?`, [id], (err, rows) => {
-    if (err) return res.status(500).send('Server Error');
-    if (rows.affectedRows) return res.json({ message: `User deleted.` });
-    res.status(400).json({ error: 'Could not delete user.' });
-  });
+  try {
+    let result = await user.delete(id);
+    if (result) return res.json({ message: 'User deleted.' });
+    res.status(400).json({ error: 'Could not deleted user.' });
+  } catch (e) {
+    console.log(e);
+    res.sendStatus(500);
+  }
+});
+
+// @route   Put api/users/:id
+// @desc    Update user info
+// @access  Private
+
+router.put('/:id', async (req, res) => {
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  const id = req.params.id;
+  const { email, phone } = req.body;
+
+  const updatedUser = {
+    id: 1,
+    username: 'jpcoelho',
+    email: 'jcoelho@silvex.pt',
+    phone: '929218424'
+  };
+
+  try {
+    let result = await user.update(updatedUser);
+    return res.json(result);
+  } catch (e) {
+    console.log(e);
+    res.sendStatus(500);
+  }
 });
 
 module.exports = router;
